@@ -15,21 +15,13 @@
 
         h1 {
             text-align: center;
-            padding: 10px;
-            margin-bottom: 0;
-        }
-
-        .datetime {
-            text-align: center;
-            font-size: 18px;
-            margin-bottom: 10px;
-            color: #00ffcc;
+            padding: 15px;
         }
 
         .dashboard {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(2, 300px);
+            grid-template-rows: repeat(2, 320px);
             gap: 15px;
             padding: 20px;
         }
@@ -38,17 +30,29 @@
             background: #2c2c3e;
             border-radius: 10px;
             padding: 10px;
+            text-align: center;
+        }
+
+        .value {
+            font-size: 22px;
+            font-weight: bold;
+            color: #00ffcc;
+        }
+
+        .time {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #cccccc;
         }
 
         canvas {
             width: 100% !important;
-            height: 100% !important;
+            height: 200px !important;
         }
 
         @media(max-width: 1000px){
             .dashboard {
                 grid-template-columns: repeat(2, 1fr);
-                grid-template-rows: auto;
             }
         }
 
@@ -62,54 +66,58 @@
 <body>
 
 <h1>Weather Station Dashboard</h1>
-<div class="datetime" id="datetime"></div>
 
-<div class="dashboard">
-    <div class="card"><canvas id="chart1"></canvas></div>
-    <div class="card"><canvas id="chart2"></canvas></div>
-    <div class="card"><canvas id="chart3"></canvas></div>
-    <div class="card"><canvas id="chart4"></canvas></div>
-    <div class="card"><canvas id="chart5"></canvas></div>
-    <div class="card"><canvas id="chart6"></canvas></div>
-    <div class="card"><canvas id="chart7"></canvas></div>
-    <div class="card"><canvas id="chart8"></canvas></div>
-</div>
+<div class="dashboard" id="dashboard"></div>
 
 <script>
-
-// ✅ Live Date & Time
-function updateDateTime() {
-    const now = new Date();
-    const date = now.toLocaleDateString();
-    const time = now.toLocaleTimeString();
-    document.getElementById("datetime").innerHTML =
-        "Date: " + date + " | Time: " + time;
-}
-
-setInterval(updateDateTime, 1000);
-updateDateTime();
 
 function randomData(min, max) {
     return (Math.random() * (max - min) + min).toFixed(2);
 }
 
-function createChart(id, label, min, max, color) {
-    let data = [];
+const sensors = [
+    {name: "Temperature (°C)", min:20, max:40, color:"red"},
+    {name: "Humidity (%)", min:40, max:90, color:"blue"},
+    {name: "Rainfall (mm)", min:0, max:20, color:"green"},
+    {name: "Wind Speed (km/h)", min:0, max:30, color:"orange"},
+    {name: "Pressure (hPa)", min:980, max:1050, color:"purple"},
+    {name: "UV Index", min:0, max:12, color:"yellow"},
+    {name: "Visibility (km)", min:1, max:10, color:"white"},
+    {name: "Soil Moisture (%)", min:10, max:60, color:"cyan"}
+];
+
+let charts = [];
+
+sensors.forEach((sensor, index) => {
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+        <h3>${sensor.name}</h3>
+        <div class="value" id="value${index}">--</div>
+        <div class="time" id="time${index}">--</div>
+        <canvas id="chart${index}"></canvas>
+    `;
+
+    document.getElementById("dashboard").appendChild(card);
+
     let labels = [];
+    let data = [];
 
     for (let i = 0; i < 10; i++) {
-        labels.push("T" + i);
-        data.push(randomData(min, max));
+        labels.push(i);
+        data.push(randomData(sensor.min, sensor.max));
     }
 
-    return new Chart(document.getElementById(id), {
+    let chart = new Chart(document.getElementById(`chart${index}`), {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-                label: label,
+                label: sensor.name,
                 data: data,
-                borderColor: color,
+                borderColor: sensor.color,
                 fill: false
             }]
         },
@@ -117,24 +125,34 @@ function createChart(id, label, min, max, color) {
             responsive: true,
             animation: false,
             plugins: {
-                legend: { labels: { color: "white" } }
-            },
-            scales: {
-                x: { ticks: { color: "white" } },
-                y: { ticks: { color: "white" } }
+                legend: { display: false }
             }
         }
     });
+
+    charts.push({chart, data, sensor, index});
+});
+
+function updateData() {
+    charts.forEach(item => {
+
+        let newValue = randomData(item.sensor.min, item.sensor.max);
+
+        item.data.push(newValue);
+        if (item.data.length > 10) item.data.shift();
+
+        item.chart.update();
+
+        // Update value and time
+        document.getElementById(`value${item.index}`).innerText = newValue;
+
+        let now = new Date();
+        document.getElementById(`time${item.index}`).innerText =
+            now.toLocaleDateString() + " " + now.toLocaleTimeString();
+    });
 }
 
-createChart("chart1", "Temperature (°C)", 20, 40, "red");
-createChart("chart2", "Humidity (%)", 40, 90, "blue");
-createChart("chart3", "Rainfall (mm)", 0, 20, "green");
-createChart("chart4", "Wind Speed (km/h)", 0, 30, "orange");
-createChart("chart5", "Pressure (hPa)", 980, 1050, "purple");
-createChart("chart6", "UV Index", 0, 12, "yellow");
-createChart("chart7", "Visibility (km)", 1, 10, "white");
-createChart("chart8", "Soil Moisture (%)", 10, 60, "cyan");
+setInterval(updateData, 2000);
 
 </script>
 
